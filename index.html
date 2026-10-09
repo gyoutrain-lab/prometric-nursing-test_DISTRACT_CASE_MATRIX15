@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCFHS Nurse Specialist Mastery Matrix</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    .glass-card {
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(168, 85, 247, 0.4);
+      border-radius: 3px;
+    }
+    .slot-active {
+      border-color: #c084fc !important;
+      background: rgba(192, 132, 252, 0.18) !important;
+      box-shadow: 0 0 16px rgba(192, 132, 252, 0.4);
+    }
+    .slot-filled {
+      border-color: #2dd4bf !important;
+      background: rgba(45, 212, 191, 0.12) !important;
+    }
+    @keyframes bam-shake {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      10% { transform: translate(-18px, -12px) rotate(-2deg); }
+      20% { transform: translate(18px, 12px) rotate(2deg); }
+      30% { transform: translate(-14px, 10px) rotate(-1.5deg); }
+      40% { transform: translate(14px, -10px) rotate(1.5deg); }
+      50% { transform: translate(-10px, -6px) rotate(-1deg); }
+      60% { transform: translate(10px, 6px) rotate(1deg); }
+      70% { transform: translate(-6px, 4px) rotate(-0.5deg); }
+      80% { transform: translate(6px, -4px) rotate(0.5deg); }
+    }
+    .bam-shake-screen {
+      animation: bam-shake 0.65s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 30px rgba(192, 132, 252, 0.6); }
+      50% { box-shadow: 0 0 70px rgba(192, 132, 252, 0.95); }
+    }
+    .victory-glow {
+      animation: pulse-glow 1.2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body id="app-body" class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-between p-3 md:p-6 font-sans selection:bg-purple-500 selection:text-slate-900 custom-scrollbar transition-all duration-300">
+
+  <header class="w-full max-w-6xl glass-card rounded-2xl p-4 mb-4 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-purple-500/30 shadow-2xl relative">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="bg-purple-500/20 text-purple-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-purple-500/40">SCFHS Saudi Board - Specialist Level</span>
+        <h1 class="text-xl md:text-2xl font-black bg-gradient-to-r from-purple-400 via-fuchsia-300 to-amber-300 bg-clip-text text-transparent">
+          Nurse Specialist Mastery Matrix
+        </h1>
+      </div>
+      <p class="text-xs text-slate-400 mt-0.5">50 High-Yield Specialist Clinical Vignettes & Advanced Decision Protocols</p>
+    </div>
+    
+    <div class="flex bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs font-semibold shadow-inner">
+      <button id="mode-matrix-btn" onclick="switchMode('matrix')" class="px-3 py-1.5 rounded-lg text-purple-400 bg-slate-800 transition">Specialist Matrix</button>
+      <button id="mode-speed-btn" onclick="switchMode('speed')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition">Rapid Match</button>
+      <button id="mode-flag-btn" onclick="switchMode('flag')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition">Safety Override</button>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div id="timer-display" class="bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-sm px-3 py-2 rounded-xl font-bold">
+        ⏱️ 60s
+      </div>
+
+      <div class="bg-slate-900/95 border-2 border-purple-400 px-4 py-2 rounded-xl text-right shadow-2xl relative min-w-[150px]">
+        <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">TOTAL SCORE</div>
+        <div id="score-display" class="text-3xl md:text-4xl font-black font-mono text-purple-300 drop-shadow-[0_0_10px_rgba(192,132,252,0.5)]">0</div>
+        <div id="target-score-display" class="text-[9px] text-amber-400/90 font-mono font-bold">TARGET: 12,500 PTS</div>
+        <div id="score-float" class="absolute -bottom-6 right-2 text-xs font-bold font-mono opacity-0 transition-all duration-500"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="w-full max-w-6xl flex-1 flex flex-col justify-center">
+
+    <!-- MODE 1 -->
+    <section id="game-mode-matrix" class="glass-card rounded-2xl p-4 md:p-6 shadow-2xl relative overflow-hidden">
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-xs font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-full border border-purple-500/20">
+          Step 1: Select Target Slot → Step 2: Assign Specialist Option
+        </span>
+        <span id="matrix-set-counter" class="text-xs text-slate-400 font-mono">Case 1 / 50</span>
+      </div>
+
+      <div class="bg-slate-900/90 rounded-xl p-4 mb-4 border border-slate-800 shadow-inner">
+        <div class="flex justify-between items-start mb-1">
+          <span class="text-xs text-amber-400 font-bold uppercase tracking-wider">SCFHS Nurse Specialist Vignette:</span>
+          <span id="matrix-category" class="text-[10px] uppercase font-bold bg-slate-800 text-purple-300 px-2 py-0.5 rounded border border-slate-700">Specialist Level</span>
+        </div>
+        <h2 id="matrix-title" class="text-lg font-bold text-fuchsia-300 mb-1">Loading...</h2>
+        <p id="matrix-symptoms" class="text-xs md:text-sm text-slate-200 leading-relaxed font-mono bg-slate-950/80 p-3 rounded-lg border border-slate-800">Loading scenario...</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div id="slot-container-tx" onclick="selectActiveSlot('tx')" class="cursor-pointer bg-slate-900/80 p-3 rounded-xl border border-slate-700 transition hover:border-purple-400">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs font-bold text-purple-400 uppercase">1. Priority Specialist Action</span>
+            <span id="badge-tx" class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">Empty</span>
+          </div>
+          <div id="slot-text-tx" class="min-h-[70px] bg-slate-950/80 rounded-lg p-2.5 border border-dashed border-slate-700 text-xs text-slate-400 flex items-center justify-center text-center italic">
+            Click here, then select matching Action below
+          </div>
+        </div>
+
+        <div id="slot-container-drug" onclick="selectActiveSlot('drug')" class="cursor-pointer bg-slate-900/80 p-3 rounded-xl border border-slate-700 transition hover:border-fuchsia-400">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs font-bold text-fuchsia-400 uppercase">2. Advanced Clinical Management</span>
+            <span id="badge-drug" class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">Empty</span>
+          </div>
+          <div id="slot-text-drug" class="min-h-[70px] bg-slate-950/80 rounded-lg p-2.5 border border-dashed border-slate-700 text-xs text-slate-400 flex items-center justify-center text-center italic">
+            Click here, then select matching Management below
+          </div>
+        </div>
+
+        <div id="slot-container-rule" onclick="selectActiveSlot('rule')" class="cursor-pointer bg-slate-900/80 p-3 rounded-xl border border-slate-700 transition hover:border-amber-400">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs font-bold text-amber-400 uppercase">3. Critical Safety Principle</span>
+            <span id="badge-rule" class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">Empty</span>
+          </div>
+          <div id="slot-text-rule" class="min-h-[70px] bg-slate-950/80 rounded-lg p-2.5 border border-dashed border-slate-700 text-xs text-slate-400 flex items-center justify-center text-center italic">
+            Click here, then select matching Safety Rule below
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs font-bold text-slate-300 uppercase">Specialist Options Pool:</span>
+          <span id="active-slot-indicator" class="text-xs font-bold text-purple-400 animate-pulse">Target Slot: Priority Specialist Action</span>
+        </div>
+        <div id="matrix-options-pool" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+      </div>
+
+      <div class="flex gap-3 mt-4">
+        <button onclick="resetCurrentMatrixSlots()" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-slate-700 transition">
+          Reset Slots
+        </button>
+        <button id="submit-matrix-btn" onclick="submitMatrixSet()" class="flex-1 py-3 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 font-black text-white rounded-xl shadow-lg transition active:scale-98 text-sm uppercase tracking-wider">
+          Validate & Submit Clinical Decision (+250 / -100 Pts)
+        </button>
+      </div>
+    </section>
+
+    <!-- MODE 2 -->
+    <section id="game-mode-speed" class="hidden glass-card rounded-2xl p-5 md:p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-xs font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-full border border-purple-500/20">
+          Mode 2: Rapid Dual Match (+100 / -50 Pts)
+        </span>
+        <span id="speed-case-counter" class="text-xs text-slate-400 font-mono">Case 1 / 50</span>
+      </div>
+
+      <div class="bg-slate-900/90 rounded-xl p-4 mb-4 border border-slate-800">
+        <h2 id="speed-condition-title" class="text-lg font-bold text-fuchsia-300 mb-1">Loading...</h2>
+        <div class="text-xs text-purple-300 font-semibold mb-1 uppercase tracking-wider">Specialist Clinical Presentation:</div>
+        <p id="speed-symptoms" class="text-xs md:text-sm text-slate-200 leading-relaxed bg-slate-950/70 p-3 rounded-lg border border-slate-800 font-mono">Loading clinical presentation...</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-purple-400 mb-2 uppercase">1. Priority Specialist Action</label>
+          <div id="speed-tx-options" class="space-y-2"></div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-fuchsia-400 mb-2 uppercase">2. Advanced Management</label>
+          <div id="speed-drug-options" class="space-y-2"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODE 3 -->
+    <section id="game-mode-flag" class="hidden glass-card rounded-2xl p-5 md:p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/20">
+          Mode 3: Critical Safety Override (+150 / -75 Pts)
+        </span>
+        <span id="flag-case-counter" class="text-xs text-slate-400 font-mono">Case 1 / 50</span>
+      </div>
+
+      <div class="bg-slate-900/90 rounded-xl p-4 mb-6 border border-slate-800">
+        <div class="flex items-center gap-2 text-rose-400 font-bold text-sm mb-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          High-Risk Specialist Vignette
+        </div>
+        <p id="flag-scenario" class="text-xs md:text-sm text-slate-200 leading-relaxed font-mono bg-slate-950/70 p-3 rounded-lg border border-slate-800"></p>
+      </div>
+
+      <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-6 text-center">
+        <p class="text-xs text-slate-300 uppercase font-semibold">Proposed Clinical Intervention:</p>
+        <p id="flag-proposed-action" class="text-base font-bold text-amber-300 mt-0.5 underline">Loading...</p>
+      </div>
+
+      <div id="flag-button-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </section>
+
+  </main>
+
+  <!-- VICTORY OVERLAY -->
+  <div id="victory-overlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-xl hidden flex flex-col items-center justify-center p-6 z-50 transition-all duration-300">
+    <div class="victory-glow bg-slate-900 border-2 border-purple-400 rounded-3xl max-w-xl w-full p-8 text-center shadow-2xl relative overflow-hidden">
+      <div class="text-6xl mb-3 animate-bounce">🏆</div>
+      <span class="bg-purple-500/20 text-purple-300 text-xs font-black px-4 py-1.5 rounded-full border border-purple-400/50 uppercase tracking-widest">EXPERT CLINICAL DECISION</span>
+      <h2 class="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-fuchsia-200 to-amber-300 my-3">
+        EXCELLENT SPECIALIST!
+      </h2>
+      <div class="text-6xl md:text-7xl font-black font-mono text-purple-300 my-2 drop-shadow-[0_0_20px_rgba(192,132,252,0.8)]" id="victory-added-score">
+        +250
+      </div>
+      <p class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">TOTAL SCORE NOW: <span id="victory-total-score" class="text-amber-300 text-lg">0</span> PTS</p>
+      
+      <div id="victory-eval-box" class="bg-slate-950/90 text-left p-4 rounded-2xl border border-slate-800 text-xs space-y-2 mb-6"></div>
+
+      <button onclick="closeVictoryOverlay()" class="w-full py-4 bg-gradient-to-r from-purple-500 to-fuchsia-500 hover:from-purple-400 hover:to-fuchsia-400 font-black text-slate-950 rounded-2xl shadow-xl transition transform active:scale-95 text-base uppercase tracking-wider">
+        CONTINUE TO NEXT SPECIALIST CASE &rarr;
+      </button>
+    </div>
+  </div>
+
+  <!-- FAILURE OVERLAY -->
+  <div id="failure-overlay" class="fixed inset-0 bg-rose-950/95 backdrop-blur-xl hidden flex flex-col items-center justify-center p-6 z-50 transition-all duration-300">
+    <div class="bg-slate-900 border-2 border-rose-600 rounded-3xl max-w-xl w-full p-8 text-center shadow-2xl relative overflow-hidden">
+      <div class="text-6xl mb-2 animate-ping">💥</div>
+      <span class="bg-rose-500/20 text-rose-400 text-xs font-black px-4 py-1.5 rounded-full border border-rose-500/50 uppercase tracking-widest">CRITICAL CLINICAL FAULT</span>
+      <h2 class="text-4xl md:text-6xl font-black text-rose-500 my-2 tracking-tight drop-shadow-[0_0_15px_rgba(244,63,94,0.8)]">
+        BAM! INCORRECT!
+      </h2>
+      <div class="text-5xl md:text-6xl font-black font-mono text-rose-400 my-2" id="failure-deducted-score">
+        -100
+      </div>
+      <p class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">TOTAL SCORE NOW: <span id="failure-total-score" class="text-rose-300 text-lg">0</span> PTS</p>
+
+      <div id="failure-eval-box" class="bg-slate-950/90 text-left p-4 rounded-2xl border border-rose-900/50 text-xs space-y-2 mb-6"></div>
+
+      <button onclick="closeFailureOverlay()" class="w-full py-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 font-black text-white rounded-2xl shadow-xl transition transform active:scale-95 text-base uppercase tracking-wider">
+        REVIEW RATIONALE & RETRY &rarr;
+      </button>
+    </div>
+  </div>
+
+  <script>
+    class SoundEngine {
+      constructor() { this.ctx = null; }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      playVictory() {
+        this.init();
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((f, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.frequency.setValueAtTime(f, now + idx * 0.07);
+          gain.gain.setValueAtTime(0.2, now + idx * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.25);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.07); osc.stop(now + idx * 0.07 + 0.25);
+        });
+      }
+      playFailure() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.5);
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    // 50 HIGH-YIELD SCFHS NURSE SPECIALIST VIGNETTES
+    const cases = [
+      { id: 1, cond: "ARDS Prone Positioning & Lung Protective Ventilation", symp: "Severe ARDS patient (PaO2/FiO2 ratio 88) on mechanical ventilator (FiO2 0.8, PEEP 14 cmH2O) exhibits refractory hypoxemia despite lung protective tidal volume (6 mL/kg PBW).", tx: "Initiate prone positioning protocol for 16 consecutive hours and optimize PEEP titration", drug: "ARDS Lung Protective Protocol", rule: "Prone positioning improves ventilation-perfusion matching in severe ARDS; target Pplat strictly <30 cmH2O", safeAction: "Prone Positioning Protocol + Target Pplat <30 cmH2O", unsafeAction: "Increase Tidal Volume to 10 mL/kg PBW to improve oxygenation", isUnsafe: true },
+      { id: 2, cond: "Septic Shock Refractory Vasopressor Titration", symp: "Septic shock patient remains hypotensive (MAP 54 mmHg) despite 30 mL/kg fluid resuscitation and high-dose Norepinephrine infusion (0.4 mcg/kg/min).", tx: "Add Vasopressin fixed-rate infusion at 0.03 units/min as secondary vasopressor", drug: "SSC Septic Shock Bundle", rule: "Vasopressin added to Norepinephrine reduces Norepinephrine dosage requirements and restores vascular tone", safeAction: "Initiate Vasopressin Infusion at 0.03 units/min", unsafeAction: "Bolus 2 Liters Hypotonic D5W Solution Rapidly", isUnsafe: true },
+      { id: 3, cond: "Pulmonary Artery Catheter (PAC) Wedge Damping", symp: "ICU Specialist observes PA catheter balloon remaining inflated with continuous PAOP (wedge) trace on monitor during mechanical ventilation.", tx: "Verify complete balloon deflation immediately; if spontaneous wedging persists, pull catheter back slightly", drug: "PA Catheter Hemodynamic Monitoring Standard", rule: "Persistent PA catheter wedging causes pulmonary artery ischemia, necrosis, or fatal arterial rupture", safeAction: "Verify Deflation + Pull Catheter Back to PA Position", unsafeAction: "Flush Balloon Port with 10 mL Normal Saline Under High Pressure", isUnsafe: true },
+      { id: 4, cond: "EVD ICP Management & Cerebral Perfusion Pressure", symp: "Neuro ICU patient with External Ventricular Drain (EVD) has Mean Arterial Pressure (MAP) of 85 mmHg and Intracranial Pressure (ICP) of 28 mmHg.", tx: "Open EVD drain at ordered level to lower ICP; calculate CPP (85 - 28 = 57 mmHg) and notify physician", drug: "Neurocritical Care ICP/CPP Protocol", rule: "Target CPP must be maintained >60-70 mmHg; CPP <50 mmHg induces ischemic cerebral ischemia", safeAction: "Open EVD to Continuous Drainage + CPP Target >60 mmHg", unsafeAction: "Clamping EVD and Administering Vasodilator to Drop MAP to 60 mmHg", isUnsafe: true },
+      { id: 5, cond: "IABP Timing Error - Early Inflation", symp: "Intra-Aortic Balloon Pump (IABP) waveform demonstrates balloon inflation occurring prior to the aortic notch (incisura) during late systole.", tx: "Adjust IABP inflation timing to align exactly with the dicrotic notch on the arterial pressure waveform", drug: "IABP Counterpulsation Standard", rule: "Early IABP inflation increases left ventricular afterload, myocardial workload, and decreases cardiac output", safeAction: "Retard Inflation Timing to Dicrotic Notch", unsafeAction: "Increase IABP Augmentation Frequency to 1:1 without Timing Adjustment", isUnsafe: true },
+      { id: 6, cond: "CRRT Filter Clotting & Transmembrane Pressure (TMP)", symp: "Patient on Continuous Venovenous Hemofiltration (CVVH) demonstrates rapid rise in Transmembrane Pressure (TMP >300 mmHg) and filter darkening.", tx: "Return blood if safe, change hemodiafilter circuit, and review regional citrate or heparin anticoagulation", drug: "CRRT Circuit Safeguard Protocol", rule: "Elevated TMP >250-300 mmHg indicates impending membrane clotting; flushing with saline fails to clear clotted fibers", safeAction: "Change CRRT Circuit + Optimize Regional Anticoagulation", unsafeAction: "Forcibly Flush Clotted CRRT Filter with 100 mL Saline Push", isUnsafe: true },
+      { id: 7, cond: "Status Epilepticus Refractory First-Line Protocol", symp: "Patient experiencing generalized tonic-clonic status epilepticus continues seizing 5 minutes after IV Lorazepam 4 mg push.", tx: "Administer second dose of Lorazepam or initiate IV Fosphenytoin loading dose (20 mg PE/kg)", drug: "ACLS Neuro-Status Epilepticus Standard", rule: "Continuous seizure activity >5 minutes leads to irreversible neuronal brain injury and metabolic collapse", safeAction: "Administer IV Fosphenytoin Loading Dose (20 mg PE/kg)", unsafeAction: "Wait 30 Minutes Before Giving Further Anticonvulsant Therapy", isUnsafe: true },
+      { id: 8, cond: "Traumatic Brain Injury Hyperventilation Protocol", symp: "TBI patient with acute unilateral pupil dilation and decerebrate posturing exhibits sudden ICP elevation to 38 mmHg.", tx: "Initiate temporary hyperventilation (PaCO2 target 30-35 mmHg) and administer Hypertonic Saline 3%", drug: "TBI Acute Herniation Protocol", rule: "Hyperventilation causes cerebral vasoconstriction; use only as short-term bridge during acute herniation signs", safeAction: "Brief Hyperventilation + 3% Hypertonic Saline IV", unsafeAction: "Induce Hypoventilation to Raise PaCO2 >50 mmHg", isUnsafe: true },
+      { id: 9, cond: "Ventilator Asynchrony Breath Stacking & Auto-PEEP", symp: "Intubated COPD patient exhibits severe ventilator-patient fighting, high peak pressures, and expiratory flow baseline failing to return to zero.", tx: "Temporarily disconnect patient from ventilator circuit, allow full exhalation, and adjust expiratory time (I:E ratio)", drug: "Ventilator Asynchrony Protocol", rule: "Auto-PEEP (dynamic hyperinflation) increases intrathoracic pressure, causing hypotension and barotrauma", safeAction: "Brief Disconnection for Complete Exhalation + Increase Expiratory Time", unsafeAction: "Increase Respiratory Rate to 35 breaths/min to blow off trapped air", isUnsafe: true },
+      { id: 10, cond: "Anaphylactic Shock Refractory Airway & IV Epinephrine", symp: "Patient in severe anaphylaxis develops profound laryngeal edema and refractory hypotension (BP 60/30) post IM Epinephrine.", tx: "Prepare immediate endotracheal intubation/cricothyroidotomy and start IV Epinephrine continuous infusion", drug: "Anaphylaxis Emergency Resuscitation Standard", rule: "Profound cardiovascular collapse in anaphylaxis requires continuous titrated IV Epinephrine infusion", safeAction: "Secure Airway + Start Continuous IV Epinephrine Infusion", unsafeAction: "Administer Oral Antihistamine and Await Resolution", isUnsafe: true },
+      { id: 11, cond: "Massive Pulmonary Embolism Thrombolytic Resuscitation", symp: "Post-op patient develops acute RV failure, severe dyspnea, SBP 72 mmHg, and CT-confirmed massive central saddle PE.", tx: "Initiate systemic thrombolytic therapy with Alteplase (tPA 100 mg IV over 2 hours) unless absolute contraindications exist", drug: "Massive PE Thrombolytic Protocol", rule: "Massive PE with hemodynamic instability requires immediate thrombolysis to restore RV perfusion", safeAction: "Administer IV Alteplase (tPA) Systemic Thrombolysis", unsafeAction: "Administer Subcutaneous Low-Dose Heparin Only", isUnsafe: true },
+      { id: 12, cond: "Extracorporeal Membrane Oxygenation (ECMO) Chattering", symp: "Patient on Veno-Venous (VV) ECMO displays severe blood line shaking (chattering) and sudden drop in ECMO blood flow rate.", tx: "Check venous cannula for obstruction, lower ECMO pump speed temporarily, and give fluid bolus if hypovolemic", drug: "VV-ECMO Management Protocol", rule: "ECMO line chattering indicates collapse of vessel wall around venous drainage cannula due to hypovolemia/high suction", safeAction: "Reduce ECMO RPM + Assess Cannula Position + Fluid Bolus", unsafeAction: "Increase ECMO Pump Speed (RPM) to Maximum", isUnsafe: true },
+      { id: 13, cond: "Hypertensive Crisis Autonomic Hyperreflexia", symp: "C5 spinal cord injury patient exhibits BP 230/125 mmHg, severe pounding headache, bradycardia HR 42, and facial flushing.", tx: "Sit patient upright, remove constrictive clothing, check for bladder distension/fecal impaction, give antihypertensive", drug: "Autonomic Dysreflexia Emergency Protocol", rule: "Elevating head of bed induces orthostatic blood pressure reduction while noxious stimulus is removed", safeAction: "Sit HOB 90 Degrees + Identify Noxious Stimulus + Antihypertensive", unsafeAction: "Place Patient Supine with Feet Elevated", isUnsafe: true },
+      { id: 14, cond: "DKA Potassium Replacement Before Insulin", symp: "Patient presenting with Diabetic Ketoacidosis has Glucose 480 mg/dL, pH 7.12, HCO3 10 mEq/L, and Potassium 3.1 mEq/L.", tx: "Hold insulin drip, administer IV Potassium Chloride replacement until serum Potassium >3.3 mEq/L", drug: "DKA Resuscitation Standard", rule: "Insulin drives potassium into cells; starting insulin with K+ <3.3 mEq/L triggers fatal ventricular arrhythmias", safeAction: "IV Potassium Replacement FIRST + Hold Insulin Drip", unsafeAction: "Start High-Dose IV Insulin Bolus Without Potassium Replacement", isUnsafe: true },
+      { id: 15, cond: "Post-Cardiac Arrest Targeted Temperature Management", symp: "Comatose adult patient successfully resuscitated from VF cardiac arrest achieves ROSC but remains unresponsive.", tx: "Initiate Targeted Temperature Management (TTM) targeting 32°C-36°C for at least 24 hours", drug: "Post-ROSC Neuroprotective Protocol", rule: "Therapeutic hypothermia/TTM reduces cerebral metabolic rate and ischemic brain injury post-cardiac arrest", safeAction: "Initiate TTM Protocol (32°C-36°C) for 24 Hours", unsafeAction: "Apply Active External Warming to Induce Hyperthermia >38.5°C", isUnsafe: true },
+      { id: 16, cond: "Hyperkalemia Wide-Complex ECG Calcium Stabilization", symp: "End-stage renal disease patient with Potassium 7.9 mEq/L shows peaked T waves, widened QRS, and loss of P waves.", tx: "Administer Calcium Gluconate 10% IV slow push immediately to stabilize cardiac membrane potential", drug: "Hyperkalemia Emergency Resuscitation Protocol", rule: "IV Calcium stabilizes cardiac myocytes immediately but does not lower serum potassium levels", safeAction: "IV Calcium Gluconate Push FIRST to Protect Myocardium", unsafeAction: "Administer Furosemide IV Alone as Primary Emergency Treatment", isUnsafe: true },
+      { id: 17, cond: "Non-Invasive Ventilation (NIV) Failure Signs", symp: "Acute COPD exacerbation patient on BiPAP (IPAP 14, EPAP 5) exhibits worsening hypercapnia (PaCO2 82 mmHg), lethargy, and pH 7.18.", tx: "Recognize NIV failure and prepare for immediate endotracheal intubation and mechanical ventilation", drug: "Acute Respiratory Failure Intubation Protocol", rule: "Encephalopathy, severe acidosis (pH <7.20), and fatigue are absolute indications to abandon NIV for intubation", safeAction: "Prepare Immediate Endotracheal Intubation", unsafeAction: "Continue BiPAP Unchanged for 12 More Hours", isUnsafe: true },
+      { id: 18, cond: "Pheochromocytoma Pre-Op Blockade Sequence", symp: "Patient scheduled for adrenalectomy for pheochromocytoma requires blood pressure and heart rate control.", tx: "Initiate Alpha-adrenergic blockade (Phenoxybenzamine) FIRST, followed by Beta-blocker addition", drug: "Pheochromocytoma Pharmacotherapy Standard", rule: "Administering Beta-blockers before Alpha-blockers causes unopposed alpha-stimulation and fatal hypertensive crisis", safeAction: "Alpha-Blocker Therapy FIRST Before Beta-Blocker", unsafeAction: "Administer Propranolol Beta-Blocker Alone FIRST", isUnsafe: true },
+      { id: 19, cond: "Ventilator-Associated Pneumonia (VAP) Bundle", symp: "Intubated patient requires evidence-based specialist nursing interventions to prevent airway colonisation and VAP.", tx: "Maintain HOB 30-45°, perform chlorhexidine oral care, assess readiness to wean, perform subglottic suctioning", drug: "VAP Prevention Bundle Standard", rule: "Continuous subglottic secretion drainage significantly reduces micro-aspiration of pathogenic oral bacteria", safeAction: "HOB 30-45° + Subglottic Suctioning + Daily Sedation Vacation", unsafeAction: "Keep Patient Supine (0 Degrees) and Skip Oral Care", isUnsafe: true },
+      { id: 20, cond: "Cardiogenic Shock Inodilator Therapy", symp: "Acute MI patient in cardiogenic shock has Cardiac Index 1.6 L/min/m2, PAOP 24 mmHg, MAP 68 mmHg, and elevated SVR.", tx: "Initiate Dobutamine or Milrinone infusion to enhance myocardial contractility and reduce afterload", drug: "Cardiogenic Shock Hemodynamic Protocol", rule: "Inodilators improve forward stroke volume while reducing elevated systemic vascular resistance", safeAction: "Initiate Dobutamine / Milrinone Inodilator Infusion", unsafeAction: "Administer High-Dose Pure Alpha-1 Vasoconstrictor Alone", isUnsafe: true },
+      { id: 21, cond: "Massive Hemorrhage Protocol 1:1:1 Ratio", symp: "Trauma patient with severe pelvic fracture and hemorrhagic shock (BP 64/38) activates Massive Transfusion Protocol.", tx: "Administer packed red blood cells, fresh frozen plasma, and platelets in a 1:1:1 balanced ratio", drug: "Massive Transfusion Hemostatic Resuscitation", rule: "Balanced 1:1:1 resuscitation prevents dilutional coagulopathy and trauma-induced coagulopathy", safeAction: "Transfuse PRBCs, FFP, and Platelets in 1:1:1 Ratio", unsafeAction: "Infuse 10 Liters Crystalloids Before Giving Blood Products", isUnsafe: true },
+      { id: 22, cond: "Epidural Analgesia Local Anesthetic Systemic Toxicity", symp: "Patient receiving continuous Epidural Bupivacaine reports metallic taste, circumoral numbness, tinnitus, and develops seizure.", tx: "Stop epidural infusion immediately, call for help, manage airway, and administer 20% Lipid Emulsion (Intralipid)", drug: "LAST Emergency Rescue Protocol", rule: "Lipid emulsion acts as a lipid sink, extracting lipophilic local anesthetics from cardiac and cerebral tissues", safeAction: "Stop Infusion + Administer IV 20% Lipid Emulsion (Intralipid)", unsafeAction: "Increase Epidural Infusion Rate", isUnsafe: true },
+      { id: 23, cond: "Subarachnoid Hemorrhage Vasospasm Prevention", symp: "Day 6 post-aneurysmal SAH patient is at risk for delayed cerebral ischemia from cerebral vasospasm.", tx: "Administer Nimodipine orally 60 mg every 4 hours and maintain euvolemia with isotonic saline", drug: "SAH Neurovascular Management Standard", rule: "Nimodipine is a calcium channel blocker proven to reduce neurological deficits from SAH vasospasm", safeAction: "Administer Oral Nimodipine 60 mg q4h + Maintain Euvolemia", unsafeAction: "Enforce Severe Fluid Restriction and Withhold Nimodipine", isUnsafe: true },
+      { id: 24, cond: "Central Venous Catheter Air Embolism Positioning", symp: "During jugular CVC removal, patient inhales deeply; suddenly develops acute chest pain, dyspnea, and cyanosis.", tx: "Place patient in Durant position (Left Lateral Trendelenburg) and administer 100% High-Flow Oxygen", drug: "Air Embolism Emergency Protocol", rule: "Left lateral Trendelenburg traps air bubbles in the right ventricular apex away from the pulmonary artery outlet", safeAction: "Left Lateral Trendelenburg Position + 100% O2", unsafeAction: "Place Patient in High Fowler's Position Tilted Right", isUnsafe: true },
+      { id: 25, cond: "Acute Coronary Syndrome STEMI Door-to-Balloon", symp: "Patient presenting to ED with chest pain shows ST-segment elevation in anterior leads V1-V4 on 12-lead ECG.", tx: "Activate Cardiac Cath Lab immediately for Primary PCI targeting Door-to-Balloon time <90 minutes", drug: "STEMI Reperfusion Protocol", rule: "Primary PCI within 90 minutes reduces infarct size, cardiogenic shock, and mortality in STEMI", safeAction: "Activate Cath Lab for Primary PCI (<90 min Target)", unsafeAction: "Delay Activation to Await 12-Hour Cardiac Enzyme Results", isUnsafe: true },
+      { id: 26, cond: "Cerebral Salt Wasting vs SIADH Differential", symp: "Post-neurosurgery patient exhibits Serum Na+ 122 mEq/L, high urine output (5 L/day), and hypovolemia.", tx: "Diagnose Cerebral Salt Wasting (CSW) and administer 0.9% Normal Saline with sodium replacement", drug: "CSW Electrolyte Management Standard", rule: "CSW features true hypovolemia requiring volume/salt replacement; fluid restriction is fatal in CSW", safeAction: "Isotonic Saline Hydration + Sodium Replacement", unsafeAction: "Enforce Strict Fluid Restriction <800 mL/day", isUnsafe: true },
+      { id: 27, cond: "Organ Donor Hemodynamic Optimization", symp: "Brain-dead organ donor candidate develops diabetes insipidus, hypothermia, and hemodynamic instability.", tx: "Administer Vasopressin / Desmopressin, maintain warm core body temp, and preserve MAP >65 mmHg", drug: "Donor Management Protocol", rule: "Optimizing donor hemodynamics and hormone replacement maximizes viable organ recovery for transplantation", safeAction: "Vasopressin / DDAVP + Maintain MAP >65 mmHg & Normothermia", unsafeAction: "Discontinue All IV Fluids and Vasopressors Completely", isUnsafe: true },
+      { id: 28, cond: "Intubation Rapid Sequence Induction (RSI)", symp: "Critically ill patient with full stomach requires emergency intubation for acute respiratory collapse.", tx: "Pre-oxygenate with 100% O2, administer induction agent and neuromuscular blocker (Succinylcholine/Rocuronium)", drug: "RSI Emergency Airway Standard", rule: "RSI minimizes risk of gastric aspiration during emergency endotracheal intubation", safeAction: "100% Pre-oxygenation + Rapid Induction & Paralytic Agent", unsafeAction: "Induce Anesthesia Without Pre-oxygenation or Airway Prep", isUnsafe: true },
+      { id: 29, cond: "Pacing Capture Failure & Sensitivity Threshold", symp: "Transvenous cardiac pacemaker monitor demonstrates pacer spikes not followed by QRS complexes (loss of capture).", tx: "Increase pacer output (mA), check pacer lead connections, and turn patient onto left side", drug: "Temporary Cardiac Pacing Protocol", rule: "Increasing milliamperage (mA) restores myocardial electrical depolarization capture", safeAction: "Increase Pacemaker Output (mA) + Inspect Lead Wiring", unsafeAction: "Turn Off Pacemaker Power Completely", isUnsafe: true },
+      { id: 30, cond: "Post-Carotid Endarterectomy (CEA) Cranial Nerve Check", symp: "Specialist performs post-op assessment on patient following left carotid endarterectomy.", tx: "Assess cranial nerves VII, IX, X, XI, XII (tongue deviation, swallowing, facial symmetry, voice hoarseness)", drug: "CEA Neurological Monitoring Protocol", rule: "Hypoglossal (XII) and vagus (X) nerve injuries are recognized surgical complications post-CEA", safeAction: "Assess Cranial Nerves IX, X, XII + Airway/Neck Swelling", unsafeAction: "Omit Cranial Nerve and Airway Assessment", isUnsafe: true },
+      { id: 31, cond: "High Peak Inspiratory Pressure (PIP) vs Plateau Pressure", symp: "Ventilated patient's monitor triggers High PIP alarm (42 cmH2O), but Plateau Pressure remains low (22 cmH2O).", tx: "Recognize airway resistance issue (bronchospasm, secretions, kinked ETT); suction airway and check tubing", drug: "Ventilator Alarm Troubleshooting Standard", rule: "Elevated PIP with normal Pplat indicates airway resistance rather than lung compliance deterioration", safeAction: "Suction Airway + Clear Mechanical Obstruction", unsafeAction: "Diagnose Acute ARDS Compliance Loss Without Suctioning", isUnsafe: true },
+      { id: 32, cond: "Continuous IV Insulin Hypokalemia Safeguard", symp: "Hyperglycemic Hyperosmolar State (HHS) patient on continuous IV regular insulin drip has Potassium drop to 3.2 mEq/L.", tx: "Add Potassium to IV fluids or give K+ replacement; temporarily hold or decrease insulin if K+ drops <3.3", drug: "HHS Glycemic & Electrolyte Protocol", rule: "Insulin shifts potassium intracellularly; hypokalemia must be corrected to prevent lethal arrhythmias", safeAction: "Replace Potassium + Adjust Insulin Drip per Protocol", unsafeAction: "Double Insulin Drip Infusion Rate Immediately", isUnsafe: true },
+      { id: 33, cond: "Heparin-Induced Thrombocytopenia (HIT) Type II", symp: "Patient on heparin drip for 5 days exhibits 50% drop in platelet count (220k to 95k) and new venous thrombosis.", tx: "Discontinue all heparin products immediately (including line flushes) and initiate Argatroban or Fondaparinux", drug: "HIT Type II Clinical Standard", rule: "HIT II is an immune-mediated prothrombotic disorder; platelet transfusions are contraindicated", safeAction: "Discontinue All Heparin + Start Non-Heparin Anticoagulant", unsafeAction: "Transfuse Platelets and Continue Heparin Drip", isUnsafe: true },
+      { id: 34, cond: "Traumatic Hemothorax Chest Tube Output", symp: "Following chest tube insertion for traumatic hemothorax, initial drainage is 1,500 mL of bright red blood.", tx: "Notify trauma surgeon stat for emergency thoracotomy evaluation and initiate autotransfusion/blood products", drug: "Thoracic Trauma Resuscitation Protocol", rule: "Initial chest tube drainage >1,500 mL or >200 mL/hr for 2-4 hours indicates major vascular bleeding", safeAction: "Stat Trauma Surgery Consult for Thoracotomy + Blood Resuscitation", unsafeAction: "Clamp Chest Tube and Observe for 24 Hours", isUnsafe: true },
+      { id: 35, cond: "Neuromuscular Blocker Train-of-Four (TOF) Monitoring", symp: "ICU patient receiving continuous Cisatracurium infusion for ARDS undergoes TOF peripheral nerve stimulation.", tx: "Adjust Cisatracurium infusion rate to maintain 1-2 twitches out of 4 on peripheral nerve stimulator", drug: "Neuromuscular Blockade Protocol", rule: "Maintaining 1-2 twitches ensures adequate paralysis while minimizing risk of prolonged post-paralytic weakness", safeAction: "Titrate Infusion to Maintain 1-2 Twitches on TOF", unsafeAction: "Titrate to 0 Twitches with Zero Baseline Assessment", isUnsafe: true },
+      { id: 36, cond: "Invasive Arterial Line Square Wave Test (Damping)", symp: "Specialist performs fast-flush square wave test on radial arterial line; wave shows multiple oscillations (>3) before returning.", tx: "Recognize underdamped arterial line system (falsely overestimating SBP) and clear rigid tubing excess / air bubbles", drug: "Arterial Line Waveform Calibration Protocol", rule: "Underdamped systems overestimate systolic pressure; overdamped systems underestimate systolic pressure", safeAction: "Inspect Tubing System + Eliminate Air / Adjust Connections", unsafeAction: "Document Overestimated Blood Pressure Without System Check", isUnsafe: true },
+      { id: 37, cond: "Malignant Hyperthermia Dantrolene Dosing", symp: "Surgical patient exposed to Succinylcholine develops severe masseter spasm, ETCO2 85 mmHg, and temp 40.5°C.", tx: "Stop triggering agents, hyperventilate with 100% O2, and administer Dantrolene Sodium 2.5 mg/kg IV push rapidly", drug: "Malignant Hyperthermia Emergency Protocol", rule: "Dantrolene inhibits calcium release from the sarcoplasmic reticulum, reversing malignant hyperthermia crisis", safeAction: "IV Dantrolene Sodium 2.5 mg/kg Push + 100% O2", unsafeAction: "Administer Calcium Channel Blockers (Diltiazem)", isUnsafe: true },
+      { id: 38, cond: "Refeeding Syndrome Hypophosphatemia", symp: "Severely malnourished patient started on parenteral nutrition develops muscle weakness, confusion, and Phosphate 1.2 mg/dL.", tx: "Slow nutritional infusion rate and replace intravenous Phosphate, Potassium, and Magnesium", drug: "Refeeding Syndrome Management Protocol", rule: "Carbohydrate reintroduction triggers insulin release, driving phosphate into cells and causing hypophosphatemic failure", safeAction: "Slow Nutrition Rate + IV Phosphate Replacement", unsafeAction: "Increase TPN Rate to Maximum to Treat Weakness", isUnsafe: true },
+      { id: 39, cond: "Tension Pneumothorax Needle Decompression", symp: "Mechanically ventilated patient suddenly develops high PIP alarm, severe hypotension (BP 68/40), and absent left breath sounds.", tx: "Perform immediate needle decompression in 2nd intercostal space midclavicular line (or 5th ICS anterior axillary line)", drug: "Emergency Thoracostomy Decompression Standard", rule: "Tension pneumothorax causes obstructive shock; needle decompression must precede diagnostic X-ray", safeAction: "Immediate Needle Thoracostomy Decompression", unsafeAction: "Wait 45 Minutes for Portable Chest X-Ray Confirmation", isUnsafe: true },
+      { id: 40, cond: "Myasthenic Crisis vs Cholinergic Crisis Differentiation", symp: "Myasthenia Gravis patient in respiratory distress exhibits extreme muscle weakness and excessive lacrimation/salivation.", tx: "Prepare Tensilon (Edrophonium) test or physician evaluation to differentiate crisis before giving anticholinesterases", drug: "Myasthenic Crisis Clinical Standard", rule: "Giving anticholinesterases in cholinergic crisis worsens lethal airway secretions and muscle weakness", safeAction: "Perform Clinical Evaluation / Tensilon Test + Secure Airway", unsafeAction: "Administer High-Dose IV Anticholinesterase Push Unmonitored", isUnsafe: true },
+      { id: 41, cond: "Central Line Bloodstream Infection (CLABSI) Bundle", symp: "Specialist oversees insertion of triple-lumen subclavian central catheter in the Intensive Care Unit.", tx: "Ensure maximal sterile barrier precautions, hand hygiene, chlorhexidine skin prep with air-drying, and daily necessity check", drug: "CLABSI Prevention Bundle Standard", rule: "Chlorhexidine skin antisepsis allowed to air-dry completely significantly reduces central line infection rates", safeAction: "Maximal Sterile Barrier + Chlorhexidine Air-Dry + Daily Review", unsafeAction: "Use Non-Sterile Gloves and Fan Skin to Dry Chlorhexidine", isUnsafe: true },
+      { id: 42, cond: "Acute Kidney Injury (AKI) Fluid Responsiveness (PLR)", symp: "Oliguric ICU patient (UOP 15 mL/hr) undergoes Passive Leg Raise (PLR) test to evaluate fluid responsiveness.", tx: "Perform PLR maneuver while monitoring cardiac output/stroke volume; administer fluid bolus only if PLR is positive", drug: "Dynamic Hemodynamic Assessment Protocol", rule: "PLR acts as a reversible self-fluid challenge (transfusing ~300 mL blood) to accurately predict fluid responsiveness", safeAction: "Perform PLR Test to Assess Stroke Volume Change", unsafeAction: "Empirically Bolus 5 Liters Saline Without Hemodynamic Assessment", isUnsafe: true },
+      { id: 43, cond: "Post-Thyroidectomy Hematoma Airway Emergency", symp: "Patient 2 hours post-thyroidectomy develops neck tightness, rapidly expanding cervical swelling, and inspiratory stridor.", tx: "Call emergency team stat and immediately open surgical skin clips/sutures at bedside to evacuate hematoma", drug: "Post-Thyroidectomy Decompression Protocol", rule: "Opening neck incision at bedside relieves direct tracheal compression and prevents asphyxiation", safeAction: "Open Neck Sutures/Clips at Bedside Stat", unsafeAction: "Transport Patient to Radiology for Soft Tissue Ultrasound", isUnsafe: true },
+      { id: 44, cond: "Mass Casualty Triage ESI Level 1 Priority", symp: "Disaster triage specialist evaluates patient with severe respiratory depression (RR 6/min), weak pulse, and GCS 6.", tx: "Assign ESI Level 1 (Immediate life-saving intervention required) and transfer directly to resuscitation bay", drug: "Emergency Severity Index (ESI) Triage Standard", rule: "ESI Level 1 requires immediate continuous life-saving resuscitation (airway/hemodynamic compromise)", safeAction: "Assign ESI Level 1 + Direct Resuscitation Bay Transfer", unsafeAction: "Assign ESI Level 4 and Direct to Waiting Room", isUnsafe: true },
+      { id: 45, cond: "Aortic Dissection Beta-Blockade Before Vasodilator", symp: "Patient with acute Type A aortic dissection presents with BP 210/110 mmHg and heart rate 108 bpm.", tx: "Administer IV Esmolol / Labetalol FIRST to reduce heart rate <60 bpm, then add Nitroprusside if SBP >120 mmHg", drug: "Aortic Dissection Hemodynamic Protocol", rule: "Lowering BP without first reducing heart rate triggers reflex tachycardia and increases aortic wall shear stress (dP/dt)", safeAction: "IV Beta-Blocker FIRST (HR Target <60) Then Vasodilator", unsafeAction: "Administer Pure Vasodilator Alone FIRST", isUnsafe: true },
+      { id: 46, cond: "Transfusion-Associated Circulatory Overload (TACO)", symp: "Elderly patient with chronic kidney disease receiving blood transfusion develops BP 180/100, tachypnea, JVD, and bilateral crackles.", tx: "Stop transfusion immediately, place patient in High Fowler's position, administer IV Furosemide, and provide oxygen", drug: "TACO Management Standard", rule: "TACO is volume overload characterized by hypertension and pulmonary edema; responds rapidly to diuresis", safeAction: "Stop Transfusion + High Fowler's + IV Furosemide", unsafeAction: "Rapidly Bolus 1 Liter Normal Saline", isUnsafe: true },
+      { id: 47, cond: "Propofol Infusion Syndrome (PRIS) Detection", symp: "ICU patient on high-dose Propofol drip (6 mg/kg/hr for >48h) exhibits metabolic acidosis, hyperkalemia, and rhabdomyolysis.", tx: "Stop Propofol infusion immediately, switch to alternative sedative (Dexmedetomidine/Midazolam), support renal function", drug: "PRIS Emergency Management Protocol", rule: "PRIS is a fatal complication causing mitochondrial failure, severe metabolic acidosis, and cardiac collapse", safeAction: "Discontinue Propofol Stat + Switch Sedative + Hemodialysis Prep", unsafeAction: "Increase Propofol Dose to Treat Acidotic Agitation", isUnsafe: true },
+      { id: 48, cond: "Endotracheal Tube Cuff Pressure Management", symp: "Specialist checks ETT cuff pressure in intubated ICU patient; manometer reads 48 cmH2O.", tx: "Deflate cuff pressure using manometer to maintain strictly between 20-30 cmH2O (22-25 mmHg)", drug: "Tracheal Mucosal Safeguard Protocol", rule: "Cuff pressure >30 cmH2O exceeds tracheal mucosal capillary perfusion pressure, causing ischemic stenosis", safeAction: "Adjust Cuff Pressure to 20-30 cmH2O", unsafeAction: "Maintain Cuff Pressure >45 cmH2O to Eliminate Leaks", isUnsafe: true },
+      { id: 49, cond: "Vincristine Extravasation Management", symp: "Peripheral IV line running Vincristine chemotherapy extravasates into dorsal hand tissues.", tx: "Stop infusion, aspirate drug, inject Subcutaneous Hyaluronidase, and apply WARM compresses", drug: "Vinca Alkaloid Extravasation Protocol", rule: "Vinca alkaloids require WARM compresses to enhance systemic absorption; COLD compresses worsen tissue necrosis", safeAction: "SubQ Hyaluronidase + Apply WARM Compresses", unsafeAction: "Apply Ice Packs Directly to Vincristine Site", isUnsafe: true },
+      { id: 50, cond: "Extubation Readiness Spontaneous Breathing Trial (SBT)", symp: "Intubated patient passing daily sedation vacation undergoes 30-minute SBT on pressure support (PS 5 cmH2O, PEEP 5 cmH2O).", tx: "Assess Rapid Shallow Breathing Index (RSBI = f/VT); if RSBI <105, patient meets primary extubation criteria", drug: "Extubation Protocol Standard", rule: "RSBI <105 breaths/min/L is a validated quantitative predictor of successful mechanical ventilation extubation", safeAction: "Calculate RSBI (<105 Target) + Assess Airway Protection", unsafeAction: "Extubate Patient While Deeply Sedated with Zero Cough Reflex", isUnsafe: true }
+    ];
+
+    let currentMode = 'matrix';
+    let currentScore = 0;
+    let timer = 60;
+    let timerInterval = null;
+    let currentIdx = 0;
+    let activeSlot = 'tx';
+    let userAllocations = { tx: null, drug: null, rule: null };
+
+    function shuffle(arr) {
+      return [...arr].sort(() => Math.random() - 0.5);
+    }
+
+    function startTimer(seconds) {
+      clearInterval(timerInterval);
+      timer = seconds;
+      document.getElementById("timer-display").innerText = `⏱️ ${timer}s`;
+      timerInterval = setInterval(() => {
+        timer--;
+        document.getElementById("timer-display").innerText = `⏱️ ${timer}s`;
+        if (timer <= 0) {
+          clearInterval(timerInterval);
+          applyScoreDelta(-100, "TIMEOUT");
+          triggerFailureOverlay(cases[currentIdx], "Time Expired! Specialist practice requires swift and precise clinical decision-making.");
+        }
+      }, 1000);
+    }
+
+    function applyScoreDelta(delta, label) {
+      currentScore += delta;
+      const scoreEl = document.getElementById("score-display");
+      const floatEl = document.getElementById("score-float");
+
+      scoreEl.innerText = currentScore;
+      floatEl.innerText = (delta > 0 ? `+${delta}` : `${delta}`) + ` (${label})`;
+      floatEl.className = delta > 0 
+        ? "absolute -bottom-6 right-2 text-xs font-bold font-mono text-purple-300 opacity-100 transition-all duration-500"
+        : "absolute -bottom-6 right-2 text-xs font-bold font-mono text-rose-400 opacity-100 transition-all duration-500";
+
+      setTimeout(() => floatEl.classList.add("opacity-0"), 1500);
+    }
+
+    function triggerVictoryOverlay(c) {
+      sound.playVictory();
+      confetti({ particleCount: 160, spread: 100, origin: { y: 0.5 } });
+
+      document.getElementById("victory-added-score").innerText = "+250";
+      document.getElementById("victory-total-score").innerText = currentScore;
+
+      const evalBox = document.getElementById("victory-eval-box");
+      evalBox.innerHTML = `
+        <div class="font-bold text-purple-400 mb-1">Scenario: ${c.cond}</div>
+        <div><strong class="text-purple-300">1. Action:</strong> ${c.tx}</div>
+        <div><strong class="text-fuchsia-300">2. Management:</strong> ${c.drug}</div>
+        <div><strong class="text-amber-300">3. Critical Safety Rule:</strong> ${c.rule}</div>
+      `;
+
+      document.getElementById("victory-overlay").classList.remove("hidden");
+    }
+
+    function triggerFailureOverlay(c, customMessage) {
+      sound.playFailure();
+      
+      const body = document.getElementById("app-body");
+      body.classList.add("bam-shake-screen");
+      setTimeout(() => body.classList.remove("bam-shake-screen"), 650);
+
+      document.getElementById("failure-deducted-score").innerText = "-100";
+      document.getElementById("failure-total-score").innerText = currentScore;
+
+      const evalBox = document.getElementById("failure-eval-box");
+      evalBox.innerHTML = `
+        <div class="font-bold text-rose-400 mb-1">Target Scenario: ${c.cond}</div>
+        <p class="text-slate-300 mb-2">${customMessage || "Critical mismatch in specialist action, clinical management, or safety rationale."}</p>
+        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 space-y-1">
+          <div><strong class="text-purple-400">Correct Specialist Action:</strong> ${c.tx}</div>
+          <div><strong class="text-fuchsia-400">Correct Management:</strong> ${c.drug}</div>
+          <div><strong class="text-amber-400">Critical Rule:</strong> ${c.rule}</div>
+        </div>
+      `;
+
+      document.getElementById("failure-overlay").classList.remove("hidden");
+    }
+
+    function closeVictoryOverlay() {
+      document.getElementById("victory-overlay").classList.add("hidden");
+      nextCase();
+    }
+
+    function closeFailureOverlay() {
+      document.getElementById("failure-overlay").classList.add("hidden");
+      nextCase();
+    }
+
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById("game-mode-matrix").classList.add("hidden");
+      document.getElementById("game-mode-speed").classList.add("hidden");
+      document.getElementById("game-mode-flag").classList.add("hidden");
+
+      document.getElementById("mode-matrix-btn").className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition";
+      document.getElementById("mode-speed-btn").className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition";
+      document.getElementById("mode-flag-btn").className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition";
+
+      if (mode === 'matrix') {
+        document.getElementById("game-mode-matrix").classList.remove("hidden");
+        document.getElementById("mode-matrix-btn").className = "px-3 py-1.5 rounded-lg text-purple-400 bg-slate-800 transition shadow";
+        loadMatrixCase();
+      } else if (mode === 'speed') {
+        document.getElementById("game-mode-speed").classList.remove("hidden");
+        document.getElementById("mode-speed-btn").className = "px-3 py-1.5 rounded-lg text-purple-400 bg-slate-800 transition shadow";
+        loadSpeedCase();
+      } else if (mode === 'flag') {
+        document.getElementById("game-mode-flag").classList.remove("hidden");
+        document.getElementById("mode-flag-btn").className = "px-3 py-1.5 rounded-lg text-rose-400 bg-slate-800 transition shadow";
+        loadFlagCase();
+      }
+    }
+
+    function loadMatrixCase() {
+      startTimer(60);
+      const c = cases[currentIdx];
+      document.getElementById("matrix-set-counter").innerText = `Case ${currentIdx + 1} / ${cases.length}`;
+      document.getElementById("matrix-title").innerText = c.cond;
+      document.getElementById("matrix-category").innerText = "Case #" + c.id;
+      document.getElementById("matrix-symptoms").innerText = c.symp;
+
+      userAllocations = { tx: null, drug: null, rule: null };
+      selectActiveSlot('tx');
+
+      const otherCases = shuffle(cases.filter(x => x.id !== c.id)).slice(0, 2);
+      
+      const poolItems = shuffle([
+        { type: 'tx', text: c.tx, isCorrect: true },
+        { type: 'tx', text: otherCases[0].tx, isCorrect: false },
+        { type: 'drug', text: c.drug, isCorrect: true },
+        { type: 'drug', text: otherCases[1].drug, isCorrect: false },
+        { type: 'rule', text: c.rule, isCorrect: true },
+        { type: 'rule', text: otherCases[0].rule, isCorrect: false }
+      ]);
+
+      renderMatrixPool(poolItems);
+      updateMatrixSlotUI();
+    }
+
+    function selectActiveSlot(slotType) {
+      activeSlot = slotType;
+      document.querySelectorAll("[id^='slot-container-']").forEach(el => el.classList.remove('slot-active'));
+      document.getElementById(`slot-container-${slotType}`).classList.add('slot-active');
+
+      const labels = { tx: '1. Priority Specialist Action', drug: '2. Advanced Clinical Management', rule: '3. Critical Safety Rule' };
+      document.getElementById("active-slot-indicator").innerText = `Target Slot: ${labels[slotType]}`;
+    }
+
+    function renderMatrixPool(items) {
+      const container = document.getElementById("matrix-options-pool");
+      container.innerHTML = "";
+      items.forEach(item => {
+        const btn = document.createElement("button");
+        btn.className = "w-full text-left p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-200 transition leading-snug";
+        btn.innerText = item.text;
+        btn.onclick = () => {
+          userAllocations[activeSlot] = item.text;
+          updateMatrixSlotUI();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function updateMatrixSlotUI() {
+      ['tx', 'drug', 'rule'].forEach(slot => {
+        const val = userAllocations[slot];
+        const textEl = document.getElementById(`slot-text-${slot}`);
+        const badgeEl = document.getElementById(`badge-${slot}`);
+        const containerEl = document.getElementById(`slot-container-${slot}`);
+
+        if (val) {
+          textEl.innerText = val;
+          textEl.className = "min-h-[70px] bg-slate-900 rounded-lg p-2.5 border border-purple-500/50 text-xs text-purple-200 font-semibold flex items-center justify-center text-center";
+          badgeEl.innerText = "Assigned";
+          badgeEl.className = "text-[10px] bg-purple-500/20 text-purple-300 font-bold px-1.5 py-0.5 rounded border border-purple-500/30";
+          containerEl.classList.add('slot-filled');
+        } else {
+          const defaultPlaceholders = {
+            tx: "Click here, then select matching Action below",
+            drug: "Click here, then select matching Management below",
+            rule: "Click here, then select matching Safety Principle below"
+          };
+          textEl.innerText = defaultPlaceholders[slot];
+          textEl.className = "min-h-[70px] bg-slate-950/80 rounded-lg p-2.5 border border-dashed border-slate-700 text-xs text-slate-400 flex items-center justify-center text-center italic";
+          badgeEl.innerText = "Empty";
+          badgeEl.className = "text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded";
+          containerEl.classList.remove('slot-filled');
+        }
+      });
+    }
+
+    function resetCurrentMatrixSlots() {
+      userAllocations = { tx: null, drug: null, rule: null };
+      updateMatrixSlotUI();
+    }
+
+    function submitMatrixSet() {
+      const c = cases[currentIdx];
+      const isTxCorrect = userAllocations.tx === c.tx;
+      const isDrugCorrect = userAllocations.drug === c.drug;
+      const isRuleCorrect = userAllocations.rule === c.rule;
+
+      const isAllCorrect = isTxCorrect && isDrugCorrect && isRuleCorrect;
+
+      if (isAllCorrect) {
+        applyScoreDelta(250, "Specialist Decision");
+        triggerVictoryOverlay(c);
+      } else {
+        applyScoreDelta(-100, "Matrix Fault");
+        triggerFailureOverlay(c, "Action, management protocol, or safety rationale assignment was incorrect.");
+      }
+    }
+
+    function loadSpeedCase() {
+      startTimer(30);
+      const c = cases[currentIdx];
+      document.getElementById("speed-case-counter").innerText = `Case ${currentIdx + 1} / ${cases.length}`;
+      document.getElementById("speed-condition-title").innerText = c.cond;
+      document.getElementById("speed-symptoms").innerText = c.symp;
+
+      const otherCases = cases.filter(x => x.id !== c.id);
+      const randomDistractors = shuffle(otherCases).slice(0, 2);
+
+      const txOptions = shuffle([c.tx, randomDistractors[0].tx, randomDistractors[1].tx]);
+      const drugOptions = shuffle([c.drug, randomDistractors[0].drug, randomDistractors[1].drug]);
+
+      renderMatchButtons("speed-tx-options", txOptions, 'tx');
+      renderMatchButtons("speed-drug-options", drugOptions, 'drug');
+    }
+
+    let selectedSpeedTx = null;
+    let selectedSpeedDrug = null;
+
+    function renderMatchButtons(containerId, options, type) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      options.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.className = "w-full text-left p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-semibold text-slate-200 transition";
+        btn.innerText = opt;
+        btn.onclick = () => {
+          if (type === 'tx') selectedSpeedTx = opt;
+          if (type === 'drug') selectedSpeedDrug = opt;
+
+          Array.from(container.children).forEach(b => b.classList.remove("border-purple-400", "bg-purple-500/20"));
+          btn.classList.add("border-purple-400", "bg-purple-500/20");
+
+          checkSpeedAnswer();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function checkSpeedAnswer() {
+      const c = cases[currentIdx];
+      if (selectedSpeedTx && selectedSpeedDrug) {
+        if (selectedSpeedTx === c.tx && selectedSpeedDrug === c.drug) {
+          applyScoreDelta(100, "Rapid Match");
+          triggerVictoryOverlay(c);
+        } else {
+          applyScoreDelta(-50, "Match Error");
+          triggerFailureOverlay(c, "Mismatched specialist action or management protocol.");
+        }
+        selectedSpeedTx = null;
+        selectedSpeedDrug = null;
+      }
+    }
+
+    function loadFlagCase() {
+      startTimer(25);
+      const c = cases[currentIdx];
+      document.getElementById("flag-case-counter").innerText = `Case ${currentIdx + 1} / ${cases.length}`;
+      document.getElementById("flag-scenario").innerText = `Scenario: ${c.cond}\nPresentation: ${c.symp}\nStandard Priority: ${c.tx}`;
+
+      const isUnsafeProposal = Math.random() < 0.5;
+      const proposedAction = isUnsafeProposal ? c.unsafeAction : c.safeAction;
+      
+      document.getElementById("flag-proposed-action").innerText = proposedAction;
+
+      const container = document.getElementById("flag-button-container");
+      container.innerHTML = "";
+
+      const safeBtn = document.createElement("button");
+      safeBtn.className = "p-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl font-bold text-slate-200 transition text-sm flex items-center justify-center gap-2";
+      safeBtn.innerText = "✅ Safe & Recommended Procedure";
+      safeBtn.onclick = () => checkFlagAnswer(false, isUnsafeProposal);
+
+      const unsafeBtn = document.createElement("button");
+      unsafeBtn.className = "p-4 bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500 text-rose-200 rounded-xl font-bold transition text-sm flex items-center justify-center gap-2";
+      unsafeBtn.innerText = "🛑 CONTRAINDICATED (Stop Intervention)";
+      unsafeBtn.onclick = () => checkFlagAnswer(true, isUnsafeProposal);
+
+      const buttons = shuffle([safeBtn, unsafeBtn]);
+      buttons.forEach(btn => container.appendChild(btn));
+    }
+
+    function checkFlagAnswer(userSaidUnsafe, actualIsUnsafe) {
+      const c = cases[currentIdx];
+      if (userSaidUnsafe === actualIsUnsafe) {
+        applyScoreDelta(150, "Safety Override Triumphant");
+        triggerVictoryOverlay(c);
+      } else {
+        applyScoreDelta(-75, "Safety Violation");
+        triggerFailureOverlay(c, "Incorrect safety override evaluation on specialist intervention.");
+      }
+    }
+
+    function nextCase() {
+      clearInterval(timerInterval);
+      currentIdx = (currentIdx + 1) % cases.length;
+      setTimeout(() => {
+        switchMode(currentMode);
+      }, 300);
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      loadMatrixCase();
+    });
+  </script>
+</body>
+
